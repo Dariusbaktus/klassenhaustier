@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Klassenhaustier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<section id="age-select" class="screen">
+  <div class="intro">
+    <h1>Klassenhaustier</h1>
+    <p>Lege Karten in eine Reihe – dein Tier tut genau das, was du ihm sagst. Nicht mehr, nicht weniger.</p>
+  </div>
+  <div class="age-cards">
+    <button class="age-card" data-age="baby">
+      <span class="age-card-badge">4–6 Jahre</span>
+      <span class="age-card-title">Kleines Tier</span>
+      <span class="age-card-hint">Füttern, streicheln, schlafen legen, laufen</span>
+    </button>
+    <button class="age-card" data-age="adult">
+      <span class="age-card-badge">7–10 Jahre</span>
+      <span class="age-card-title">Großes Tier</span>
+      <span class="age-card-hint">Alles vom kleinen Tier – plus bürsten, Krallen schneiden, Kunststücke</span>
+    </button>
+  </div>
+</section>
+
+<section id="game" class="screen" hidden>
+
+  <header class="hud">
+    <button id="back-btn" class="icon-btn" title="Anderes Tier wählen" aria-label="Anderes Tier wählen">↺</button>
+    <div class="mood" id="mood-wrap">
+      <span id="mood-face" class="mood-face">🙂</span>
+      <div class="mood-bar"><div id="mood-fill" class="mood-fill"></div></div>
+    </div>
+    <div class="hud-bonus">
+      <button id="motion-btn" class="icon-btn" title="Bewegungssensor aktivieren" aria-label="Bewegungssensor aktivieren">📳</button>
+      <button id="mic-btn" class="icon-btn" hidden title="Sprachsteuerung" aria-label="Sprachsteuerung">🎙️</button>
+    </div>
+  </header>
+
+  <div id="canvas-wrap">
+    <canvas id="scene"></canvas>
+    <div id="toast" class="toast" aria-live="polite"></div>
+  </div>
+
+  <div id="sequence-bar" class="sequence-bar" aria-label="Deine Anweisung"></div>
+
+  <div class="tray-wrap">
+    <div id="card-tray" class="card-tray" aria-label="Verfügbare Karten"></div>
+    <button id="run-btn" class="run-btn" disabled>Los!</button>
+  </div>
+
+</section>
+
+<div id="speech-consent" class="overlay" hidden>
+  <div class="overlay-card">
+    <h2>Sprachsteuerung</h2>
+    <p>Wenn du sprichst, hört das Gerät kurz zu und schickt die Aufnahme zur Verarbeitung an einen externen Dienst
+       (Google) – sie bleibt nicht nur auf diesem Tablet. Es wird nichts gespeichert, aber die Sprache verlässt
+       das Gerät kurz, um erkannt zu werden.</p>
+    <div class="overlay-actions">
+      <button id="speech-consent-ok" class="primary-btn">Verstanden, Mikrofon nutzen</button>
+      <button id="speech-consent-cancel" class="ghost-btn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
