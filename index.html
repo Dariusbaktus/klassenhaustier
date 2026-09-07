@@ -1,69 +1,165 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Klassenhaustier</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Klassenhaustier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+<!-- ===== START SCREEN ===== -->
 <section id="age-select" class="screen">
+  <div class="start-bg"></div>
   <div class="intro">
+    <div class="hero-paws">
+      <span class="paw p1">🐾</span>
+      <span class="paw p2">🐾</span>
+      <span class="paw p3">🐾</span>
+    </div>
     <h1>Klassenhaustier</h1>
-    <p>Lege Karten in eine Reihe – dein Tier tut genau das, was du ihm sagst. Nicht mehr, nicht weniger.</p>
+    <p class="subtitle">Lege Karten in eine Reihe &ndash; dein Tier tut genau das, was du ihm sagst!</p>
   </div>
+  <div class="customizer-card">
+    <div class="customizer-row">
+      <label class="customizer-label" for="pet-name-input">🏷️ Wie heißt dein Haustier?</label>
+      <input type="text" id="pet-name-input" class="pet-name-input" placeholder="z. B. Balu, Mimi, Findus" maxlength="15">
+    </div>
+    <div class="customizer-row">
+      <span class="customizer-label">🐾 Welches Tier möchtest du?</span>
+      <div id="pet-type-selector" class="pet-type-buttons">
+        <button type="button" class="pet-type-btn active" data-type="cat">🐱 Katze</button>
+        <button type="button" class="pet-type-btn" data-type="dog">🐶 Hund</button>
+        <button type="button" class="pet-type-btn" data-type="bunny">🐰 Hase</button>
+      </div>
+    </div>
+    <div class="customizer-row">
+      <span class="customizer-label">🎨 Fellfarbe wählen:</span>
+      <div id="pet-color-selector" class="pet-color-buttons">
+        <button type="button" class="pet-color-btn active" data-color="orange" title="Karamell / Orange" style="--swatch: #f28b38;"><span>🧡</span></button>
+        <button type="button" class="pet-color-btn" data-color="white" title="Schneeweiß" style="--swatch: #faf7f2;"><span>🤍</span></button>
+        <button type="button" class="pet-color-btn" data-color="brown" title="Schokobraun" style="--swatch: #85532d;"><span>🤎</span></button>
+        <button type="button" class="pet-color-btn" data-color="gray" title="Silbergrau" style="--swatch: #8492a6;"><span>🩶</span></button>
+        <button type="button" class="pet-color-btn" data-color="golden" title="Goldgelb" style="--swatch: #e5a93c;"><span>💛</span></button>
+        <button type="button" class="pet-color-btn" data-color="magic" title="Magisches Lila" style="--swatch: #9d71e8;"><span>💜</span></button>
+      </div>
+    </div>
+  </div>
+
   <div class="age-cards">
     <button class="age-card" data-age="baby">
-      <span class="age-card-badge">4–6 Jahre</span>
+      <span class="age-card-emoji">🐣</span>
+      <span class="age-card-badge">4&ndash;6 Jahre</span>
       <span class="age-card-title">Kleines Tier</span>
-      <span class="age-card-hint">Füttern, streicheln, schlafen legen, laufen</span>
+      <span class="age-card-hint">Füttern, streicheln, schlafen legen &amp; laufen</span>
     </button>
     <button class="age-card" data-age="adult">
-      <span class="age-card-badge">7–10 Jahre</span>
+      <span class="age-card-emoji">🦊</span>
+      <span class="age-card-badge">7&ndash;10 Jahre</span>
       <span class="age-card-title">Großes Tier</span>
-      <span class="age-card-hint">Alles vom kleinen Tier – plus bürsten, Krallen schneiden, Kunststücke</span>
+      <span class="age-card-hint">Plus bürsten, Krallen schneiden &amp; Kunststücke</span>
     </button>
   </div>
 </section>
 
+<!-- ===== GAME SCREEN ===== -->
 <section id="game" class="screen" hidden>
 
   <header class="hud">
-    <button id="back-btn" class="icon-btn" title="Anderes Tier wählen" aria-label="Anderes Tier wählen">↺</button>
+    <button id="back-btn" class="icon-btn" title="Zurück" aria-label="Zurück">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+
     <div class="mood" id="mood-wrap">
       <span id="mood-face" class="mood-face">🙂</span>
       <div class="mood-bar"><div id="mood-fill" class="mood-fill"></div></div>
     </div>
-    <div class="hud-bonus">
-      <button id="motion-btn" class="icon-btn" title="Bewegungssensor aktivieren" aria-label="Bewegungssensor aktivieren">📳</button>
+
+    <div class="xp-display">
+      <span class="xp-icon">⭐</span>
+      <span id="xp-count">0</span>
+    </div>
+
+    <div class="hud-right">
+      <button id="sound-btn" class="icon-btn" title="Ton ein/aus" aria-label="Ton an oder aus">🔊</button>
+      <button id="mode-toggle" class="icon-btn mode-btn" title="Aufgaben / Freispiel" aria-label="Spielmodus wechseln">🎯</button>
+      <button id="motion-btn" class="icon-btn" title="Bewegungssensor" aria-label="Bewegungssensor">📳</button>
       <button id="mic-btn" class="icon-btn" hidden title="Sprachsteuerung" aria-label="Sprachsteuerung">🎙️</button>
     </div>
   </header>
 
-  <div id="canvas-wrap">
-    <canvas id="scene"></canvas>
-    <div id="toast" class="toast" aria-live="polite"></div>
+  <!-- Mission bar with level picker -->
+  <div id="mission-bar" class="mission-bar" hidden>
+    <div id="mission-picker" class="mission-picker"></div>
+    <div class="mission-detail">
+      <span class="mission-icon">🎯</span>
+      <span id="mission-text" class="mission-text"></span>
+      <button id="mission-speak-btn" class="speak-btn" title="Aufgabe vorlesen" aria-label="Aufgabe vorlesen">🗣️</button>
+    </div>
   </div>
 
-  <div id="sequence-bar" class="sequence-bar" aria-label="Deine Anweisung"></div>
+  <!-- 3D scene + overlays -->
+  <div id="canvas-wrap">
+    <canvas id="scene"></canvas>
 
+    <div id="speech-bubble" class="speech-bubble" hidden aria-live="polite">
+      <div id="speech-bubble-text" class="speech-bubble-text"></div>
+      <button id="bubble-speak-btn" class="bubble-speak-btn" title="Vorlesen" aria-label="Sprechblase vorlesen">🔊</button>
+    </div>
+
+    <div id="particles" class="particles-overlay"></div>
+  </div>
+
+  <!-- Sequence bar (code-like) -->
+  <div class="sequence-wrap">
+    <div class="sequence-label">Programm:</div>
+    <div id="sequence-bar" class="sequence-bar" aria-label="Deine Anweisung"></div>
+  </div>
+
+  <!-- Card tray -->
   <div class="tray-wrap">
     <div id="card-tray" class="card-tray" aria-label="Verfügbare Karten"></div>
-    <button id="run-btn" class="run-btn" disabled>Los!</button>
+    <button id="run-btn" class="run-btn" disabled>
+      <span class="run-btn-icon">▶</span>
+      <span class="run-btn-text">Los!</span>
+    </button>
   </div>
 
 </section>
 
+<!-- ===== CONFETTI OVERLAY ===== -->
+<div id="confetti-container" class="confetti-container"></div>
+
+<!-- ===== LEVEL-UP / REWARD OVERLAY ===== -->
+<div id="level-up-overlay" class="overlay" hidden>
+  <div class="overlay-card level-up-card">
+    <div class="level-up-icon">🌟</div>
+    <h2 id="level-up-title">Super gemacht!</h2>
+    <p id="level-up-text"></p>
+    <div id="accessory-reveal" class="accessory-reveal" hidden>
+      <p class="accessory-label">Neues Accessoire freigeschaltet:</p>
+      <p id="accessory-name" class="accessory-name"></p>
+    </div>
+    <button id="level-up-ok" class="primary-btn">Weiter!</button>
+  </div>
+</div>
+
+<!-- ===== FIRST-TIME DISCOVERY TOAST ===== -->
+<div id="discovery-toast" class="discovery-toast" hidden>
+  <span class="discovery-star">⭐</span>
+  <span id="discovery-text" class="discovery-text"></span>
+</div>
+
+<!-- ===== SPEECH CONSENT OVERLAY ===== -->
 <div id="speech-consent" class="overlay" hidden>
   <div class="overlay-card">
-    <h2>Sprachsteuerung</h2>
-    <p>Wenn du sprichst, hört das Gerät kurz zu und schickt die Aufnahme zur Verarbeitung an einen externen Dienst
-       (Google) – sie bleibt nicht nur auf diesem Tablet. Es wird nichts gespeichert, aber die Sprache verlässt
-       das Gerät kurz, um erkannt zu werden.</p>
+    <h2>🎙️ Sprachsteuerung</h2>
+    <p>Wenn du sprichst, hört das Gerät kurz zu und schickt die Aufnahme zur Erkennung an Google.
+       Es wird nichts gespeichert.</p>
     <div class="overlay-actions">
       <button id="speech-consent-ok" class="primary-btn">Verstanden, Mikrofon nutzen</button>
       <button id="speech-consent-cancel" class="ghost-btn">Abbrechen</button>
