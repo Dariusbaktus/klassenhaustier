@@ -895,7 +895,7 @@ function buildPet() {
       earGroup.rotation.z = x < 0 ? 0.35 : -0.35;
       earGroup.rotation.x = 0.25;
 
-      const outerEar = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.09, 0.22, 8, 12) : new THREE.CylinderGeometry(0.08, 0.11, 0.34, 12), primaryMat);
+      const outerEar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.36, 12), primaryMat);
       outerEar.castShadow = true;
       earGroup.add(outerEar);
 
@@ -1090,9 +1090,11 @@ function resetPet() {
 
 function onResize() {
   const wrap = document.getElementById('canvas-wrap');
-  if (!wrap) return;
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  renderer.setSize(w, h);
+  if (!wrap || !renderer || !camera) return;
+  const w = wrap.clientWidth || window.innerWidth;
+  const h = wrap.clientHeight || Math.round(window.innerHeight * 0.45);
+  if (w <= 0 || h <= 0) return;
+  renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
@@ -1902,34 +1904,47 @@ function selectPetColor(colorId) {
 /* ---------- Ablauf / Init ---------- */
 
 function startAge(age) {
-  state.age = age;
-  state.sequence = [];
-  state.mood = 50;
-  
-  // Read pet name if provided
-  const nameInput = document.getElementById('pet-name-input');
-  if (nameInput && nameInput.value.trim()) {
-    state.petName = nameInput.value.trim();
-  } else {
-    state.petName = state.petType === 'dog' ? 'Balu' : state.petType === 'bunny' ? 'Hoppel' : 'Mimi';
-  }
+  try {
+    state.age = age;
+    state.sequence = [];
+    state.mood = 50;
+    
+    // Read pet name if provided
+    const nameInput = document.getElementById('pet-name-input');
+    if (nameInput && nameInput.value.trim()) {
+      state.petName = nameInput.value.trim();
+    } else {
+      state.petName = state.petType === 'dog' ? 'Balu' : state.petType === 'bunny' ? 'Hoppel' : 'Mimi';
+    }
 
-  els['age-select'].hidden = true;
-  els['game'].hidden = false;
-  if (!renderer) {
-    initScene();
-    relocateBowl();
-  } else {
-    resetPet();
+    els['age-select'].hidden = true;
+    els['game'].hidden = false;
+
+    renderCardTray();
+    renderSequenceBar();
+    setMood(0);
+    updateXP();
+    updateModeUI();
+
+    if (!renderer) {
+      initScene();
+      relocateBowl();
+    } else {
+      resetPet();
+    }
+    if (basketGroup) basketGroup.visible = (state.age === 'adult');
+
+    onResize();
+    requestAnimationFrame(onResize);
+    setTimeout(onResize, 50);
+    setTimeout(onResize, 200);
+
+    showSpeechBubble(`Hallo! Ich bin ${state.petName}! 🐾`, 3500);
+  } catch (err) {
+    console.error('startAge error:', err);
+    renderCardTray();
+    renderSequenceBar();
   }
-  if (basketGroup) basketGroup.visible = (state.age === 'adult');
-  renderCardTray();
-  renderSequenceBar();
-  setMood(0);
-  updateXP();
-  updateModeUI();
-  onResize();
-  showSpeechBubble(`Hallo! Ich bin ${state.petName}! 🐾`, 3500);
 }
 
 function backToSelect() {
