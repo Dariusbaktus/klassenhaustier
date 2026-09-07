@@ -236,19 +236,114 @@ function playSound(type) {
   }
 }
 
-/* ---------- Text-to-Speech (Vorlesefunktion) ---------- */
+/* ---------- Text-to-Speech & Voice Synthesis ---------- */
+
+let germanVoices = [];
+let bestGermanVoice = null;
+let currentUtterance = null;
+
+function initVoices() {
+  if (!('speechSynthesis' in window)) return;
+  try {
+    const list = window.speechSynthesis.getVoices() || [];
+    if (list.length > 0) {
+      germanVoices = list.filter(v => v.lang && (v.lang.startsWith('de') || v.lang.includes('DE') || v.lang.includes('de')));
+      // Prioritize natural sounding German voices
+      bestGermanVoice = germanVoices.find(v => !v.localService && /google|natural|siri|anna|katja|petra|markus|yannick/i.test(v.name))
+        || germanVoices.find(v => v.lang === 'de-DE' || v.lang === 'de_DE')
+        || germanVoices[0]
+        || null;
+    }
+  } catch (e) {
+    console.warn('Voice query error:', e);
+  }
+}
+
+if ('speechSynthesis' in window) {
+  initVoices();
+  window.speechSynthesis.onvoiceschanged = initVoices;
+}
+
+// Global user gesture unlock for Web Audio and SpeechSynthesis on iOS / Android
+let audioUnlocked = false;
+function unlockAudioEngine() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  // Unlock Web Audio context
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume();
+    }
+  } catch (e) {}
+
+  // Unlock iOS Safari Speech Synthesis
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.resume();
+      const silent = new SpeechSynthesisUtterance('');
+      silent.volume = 0;
+      silent.rate = 10;
+      window.speechSynthesis.speak(silent);
+    } catch (e) {}
+  }
+}
+
+['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, unlockAudioEngine, { once: true, passive: true });
+});
 
 function speakText(text) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  // Strip emojis from reading
-  const clean = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+  if (!('speechSynthesis' in window) || !state.soundEnabled) return;
+  if (!text) return;
+
+  // Clean string: strip emojis, action icons and formatting
+  let clean = text
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+    .replace(/[🎯🎮🍽️🛏️💤⭐💪🎉🏆🤔🐾🧱🗺️✨🔊🗣️🎙️▶✅]/g, '')
+    .trim();
+
   if (!clean) return;
+
+  try {
+    window.speechSynthesis.resume();
+    window.speechSynthesis.cancel();
+  } catch (e) {}
+
   const utter = new SpeechSynthesisUtterance(clean);
+  currentUtterance = utter; // Retain reference to prevent garbage collection mid-speech
+  window._activeSpeechUtterance = utter;
+
   utter.lang = 'de-DE';
+  if (!bestGermanVoice && germanVoices.length === 0) {
+    initVoices();
+  }
+  if (bestGermanVoice) {
+    utter.voice = bestGermanVoice;
+  } else if (germanVoices.length > 0) {
+    utter.voice = germanVoices[0];
+  }
+
   utter.rate = 0.92;
-  utter.pitch = 1.15; // Friendly, slightly higher tone for kids
-  window.speechSynthesis.speak(utter);
+  utter.pitch = 1.12; // Friendly, engaging tone for kids
+  utter.volume = 1.0;
+
+  utter.onend = () => {
+    if (currentUtterance === utter) currentUtterance = null;
+  };
+  utter.onerror = (e) => {
+    if (currentUtterance === utter) currentUtterance = null;
+    console.warn('SpeechSynthesis error:', e);
+  };
+
+  setTimeout(() => {
+    try {
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn('SpeechSynthesis speak failed:', e);
+    }
+  }, 30);
 }
 
 /* ---------- Spielzustand ---------- */
@@ -1815,60 +1910,182 @@ async function runSequence() {
   }
 }
 
-/* ---------- Sprachsteuerung (Bonus) ---------- */
+/* ---------- Sprachsteuerung (Einsprechen) ---------- */
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizer = null;
-let speechConsentGiven = false;
+let isListening = false;
+let speechConsentGiven = localStorage.getItem('speechConsentGiven') === 'true';
 
 const VOICE_MAP = [
-  [/hoch|rauf|oben/, 'up'], [/runter|unten/, 'down'],
-  [/links/, 'left'], [/rechts/, 'right'],
-  [/hüpf|spring/, 'hop'], [/futter|füttern|essen/, 'feed'],
-  [/streichel|kuschel/, 'pet'], [/bürst/, 'brush'],
-  [/schlaf/, 'sleep'], [/schneid|kralle/, 'trim'],
-  [/kunststück|trick|zeig/, 'trick'],
+  // Movement
+  [/\b(hoch|rauf|nach\s*oben|geh\s*nach\s*oben|geh\s*rauf|geh\s*hoch|oben|vor|vorne|vorwärts|geradeaus|schritt\s*vor)\b/i, 'up'],
+  [/\b(runter|nach\s*unten|geh\s*nach\s*unten|geh\s*runter|unten|zurück|hinten|rückwärts|schritt\s*zurück)\b/i, 'down'],
+  [/\b(links|nach\s*links|geh\s*nach\s*links|dreh\s*links|bieg\s*links)\b/i, 'left'],
+  [/\b(rechts|nach\s*rechts|geh\s*nach\s*rechts|dreh\s*rechts|bieg\s*rechts)\b/i, 'right'],
+  [/\b(zwei\s*hoch|doppelt\s*hoch|2\s*hoch|zwei\s*schritte\s*vor|zwei\s*schritte\s*hoch)\b/i, 'up2'],
+  [/\b(zwei\s*runter|doppelt\s*runter|2\s*runter|zwei\s*schritte\s*runter)\b/i, 'down2'],
+  [/\b(zwei\s*links|doppelt\s*links|2\s*links|zwei\s*schritte\s*links)\b/i, 'left2'],
+  [/\b(zwei\s*rechts|doppelt\s*rechts|2\s*rechts|zwei\s*schritte\s*rechts)\b/i, 'right2'],
+  // Actions
+  [/\b(hüpf|hüpfen|spring|springen|hop|hops|hoppel)\b/i, 'hop'],
+  [/\b(futter|füttern|essen|fress|fressen|napf|hunger|mampf|leckerli|happa|lecker|füttere)\b/i, 'feed'],
+  [/\b(streichel|streicheln|kuschel|kuscheln|lieb|fein|schmuse|schmusen|kraulen|lieb\s*haben)\b/i, 'pet'],
+  [/\b(bürst|bürsten|kamm|kämmen|putzen|sauber|fell|pflege|saubermachen)\b/i, 'brush'],
+  [/\b(schlaf|schlafen|bett|körbchen|gute\s*nacht|müde|rast|ruhe|heia|ab\s*ins\s*bett)\b/i, 'sleep'],
+  [/\b(schneid|schneiden|kralle|krallen|nagel|nägel|pediküre)\b/i, 'trim'],
+  [/\b(kunststück|trick|zeig|tanz|tanzen|dreh\s*dich|drehen|männchen|salto|show|kunststücke)\b/i, 'trick'],
+  // Program actions
+  [/\b(los|start|starten|lauf|ausführen|abfahrt|action|los\s*gehts|geh\s*los|programm\s*starten|abspielen)\b/i, '__run__'],
+  [/\b(lösch|löschen|neu|nochmal|alles\s*weg|weg|zurücksetzen|reset|abbrechen|alles\s*löschen)\b/i, '__clear__'],
 ];
 
 function setupSpeech() {
-  if (!SpeechRecognitionCtor) return;
+  if (!SpeechRecognitionCtor) {
+    if (els['mic-btn']) {
+      els['mic-btn'].hidden = false;
+      els['mic-btn'].title = 'Spracherkennung wird von diesem Browser leider nicht unterstützt';
+      els['mic-btn'].addEventListener('click', () => {
+        showSpeechBubble('Spracheingabe wird in diesem Browser leider nicht unterstützt (z.B. Chrome/Safari auf iOS/Android nutzen). 🎤', 4000);
+      });
+    }
+    return;
+  }
+  
   els['mic-btn'].hidden = false;
   els['mic-btn'].addEventListener('click', () => {
+    unlockAudioEngine();
+    if (isListening) {
+      stopListening();
+      return;
+    }
     if (!speechConsentGiven) {
       els['speech-consent'].hidden = false;
     } else {
       startListening();
     }
   });
+  
   els['speech-consent-ok'].addEventListener('click', () => {
+    unlockAudioEngine();
     speechConsentGiven = true;
+    try { localStorage.setItem('speechConsentGiven', 'true'); } catch (e) {}
     els['speech-consent'].hidden = true;
     startListening();
   });
+  
   els['speech-consent-cancel'].addEventListener('click', () => {
     els['speech-consent'].hidden = true;
   });
 }
 
+function stopListening() {
+  if (recognizer) {
+    try { recognizer.stop(); } catch (e) {}
+  }
+  isListening = false;
+  els['mic-btn'].classList.remove('active');
+}
+
 function startListening() {
   if (state.running) return;
-  recognizer = new SpeechRecognitionCtor();
-  recognizer.lang = 'de-DE';
-  recognizer.continuous = false;
-  recognizer.interimResults = false;
-  els['mic-btn'].classList.add('active');
-  recognizer.onresult = (event) => {
-    const said = event.results[0][0].transcript.toLowerCase();
-    const match = VOICE_MAP.find(([re]) => re.test(said));
-    if (match && CARD_SETS[state.age].includes(match[1])) {
-      executeCard(match[1]);
-    } else {
-      showSpeechBubble(`"${said}" – das kennt dein Tier noch nicht.`);
-    }
-  };
-  recognizer.onend = () => els['mic-btn'].classList.remove('active');
-  recognizer.onerror = () => els['mic-btn'].classList.remove('active');
-  recognizer.start();
+  stopListening();
+
+  try {
+    recognizer = new SpeechRecognitionCtor();
+    recognizer.lang = 'de-DE';
+    recognizer.continuous = false;
+    recognizer.interimResults = false;
+    recognizer.maxAlternatives = 3;
+
+    isListening = true;
+    els['mic-btn'].classList.add('active');
+    playSound('hop');
+    showSpeechBubble('Ich höre zu... 🎙️ Sag z.B. "Oben", "Füttern" oder "Los"!', 3500);
+
+    recognizer.onresult = (event) => {
+      isListening = false;
+      els['mic-btn'].classList.remove('active');
+
+      let recognizedMatch = null;
+      let recognizedText = '';
+
+      // Check all alternatives
+      for (let i = 0; i < event.results[0].length; i++) {
+        const said = event.results[0][i].transcript.toLowerCase().trim();
+        if (!recognizedText) recognizedText = said;
+        const match = VOICE_MAP.find(([re]) => re.test(said));
+        if (match) {
+          recognizedMatch = match[1];
+          recognizedText = said;
+          break;
+        }
+      }
+
+      if (!recognizedMatch) {
+        showSpeechBubble(`"${recognizedText}" – das kenne ich nicht. Sag z.B. "Oben", "Füttern" oder "Los"! 🐾`, 3500);
+        return;
+      }
+
+      // Handle special control commands
+      if (recognizedMatch === '__run__') {
+        showSpeechBubble('Start! 🚀');
+        runSequence();
+        return;
+      }
+
+      if (recognizedMatch === '__clear__') {
+        state.sequence = [];
+        renderSequenceBar();
+        showSpeechBubble('Programm gelöscht! 🗑️', 2500);
+        return;
+      }
+
+      // Handle card action
+      const cardDef = CARD_DEFS[recognizedMatch];
+      const cardLabel = cardDef ? cardDef.label : recognizedMatch;
+      const isAllowedInAge = CARD_SETS[state.age].includes(recognizedMatch);
+
+      if (!isAllowedInAge) {
+        showSpeechBubble(`"${cardLabel}" ist in dieser Altersstufe noch nicht verfügbar! 🐾`, 3000);
+        return;
+      }
+
+      if (state.age === 'baby') {
+        showSpeechBubble(`Befehl: ${cardLabel}! 🐾`, 2500);
+        executeCard(recognizedMatch);
+      } else {
+        addToSequence(recognizedMatch);
+        showSpeechBubble(`"${cardLabel}" zum Programm hinzugefügt! ➕`, 2500);
+      }
+    };
+
+    recognizer.onend = () => {
+      isListening = false;
+      els['mic-btn'].classList.remove('active');
+    };
+
+    recognizer.onerror = (event) => {
+      isListening = false;
+      els['mic-btn'].classList.remove('active');
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        showSpeechBubble('Mikrofon-Zugriff ist blockiert. Bitte im Browser erlauben! 🎙️', 4000);
+      } else if (event.error === 'no-speech') {
+        showSpeechBubble('Ich habe leider nichts gehört. Versuch es noch einmal! 👂', 3000);
+      } else if (event.error === 'network') {
+        showSpeechBubble('Spracherkennung benötigt eine Internetverbindung. 🌐', 3500);
+      } else if (event.error !== 'aborted') {
+        showSpeechBubble('Konnte nichts verstehen – bitte noch einmal versuchen! 🐾', 3000);
+      }
+    };
+
+    recognizer.start();
+  } catch (err) {
+    isListening = false;
+    els['mic-btn'].classList.remove('active');
+    console.warn('SpeechRecognition start error:', err);
+    showSpeechBubble('Mikrofon konnte nicht gestartet werden. 🎙️', 3000);
+  }
 }
 
 /* ---------- Bewegungssensor (Bonus) ---------- */
@@ -2019,7 +2236,9 @@ function init() {
 
   // Voice read-aloud buttons
   if (els['mission-speak-btn']) {
-    els['mission-speak-btn'].addEventListener('click', () => {
+    els['mission-speak-btn'].addEventListener('click', (e) => {
+      e.stopPropagation();
+      unlockAudioEngine();
       const text = els['mission-text']?.textContent || '';
       speakText(text);
     });
@@ -2028,6 +2247,7 @@ function init() {
   if (els['bubble-speak-btn']) {
     els['bubble-speak-btn'].addEventListener('click', (e) => {
       e.stopPropagation();
+      unlockAudioEngine();
       const text = els['speech-bubble-text']?.textContent || '';
       speakText(text);
     });

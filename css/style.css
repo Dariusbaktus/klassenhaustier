@@ -349,6 +349,18 @@ button {
   border: 2px solid var(--teal);
 }
 
+.icon-btn#mic-btn.active {
+  background: #ff4757 !important;
+  border: 2px solid #ff6b81 !important;
+  color: #fff !important;
+  animation: micGlow 1s infinite alternate ease-in-out;
+}
+
+@keyframes micGlow {
+  0% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 71, 87, 0.5); }
+  100% { transform: scale(1.18); box-shadow: 0 0 18px rgba(255, 71, 87, 0.9); }
+}
+
 .mode-btn {
   width: auto;
   border-radius: 2rem;
