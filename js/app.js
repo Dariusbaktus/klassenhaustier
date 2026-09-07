@@ -77,8 +77,6 @@ const DIRS = {
 
 const MISSIONS = {
   baby: [
-    { text: 'Tippe unten eine Pfeil-Karte an und drücke „Los!", um einen Schritt zu gehen!',
-      solution: null, validate: 'anyMove', hint: 'Wähle einen Richtungspfeil und drücke auf Los!' },
     { text: '🍽️ Siehst du den blinkenden Napf? Führe dein Tier mit den Pfeilen dorthin und tippe dann „Füttern" an!',
       solution: null, validate: 'feedAtBowl', hint: 'Nutze die Pfeile um zum Napf zu kommen, dann tippe Füttern an!' },
     { text: 'Verwöhne dein Tier! Tippe erst „Streicheln" 🐾 und dann „Schlafen" 🌙 an.',
@@ -87,6 +85,8 @@ const MISSIONS = {
       solution: null, validate: 'feedAtBowl', hint: 'Der Napf steht jedes Mal woanders – finde den Weg dorthin!' },
     { text: 'Gehe spazieren und belohne dein Tier danach mit Streicheln 🐾!',
       solution: null, validate: 'moveAndPet', hint: 'Kombiniere Pfeile mit Streicheln!' },
+    { text: 'Lass dein Tier einen Spaziergang machen und danach schlafen 🌙!',
+      solution: null, validate: 'moveAndSleep', hint: 'Kombiniere Pfeile mit Schlafen!' },
   ],
   adult: [
     { text: '🍽️ Finde den schnellsten Weg zum blinkenden Napf und fütter dein Tier!',
@@ -481,15 +481,30 @@ function buildBowl() {
   bowlGroup = new THREE.Group();
   bowlGroup.position.set(bowlWorld.x, 0, bowlWorld.z);
 
-  // Pulsierender Leuchtring
+  // Pulsierender Leuchtring auf dem Kachelboden (y=0.038 gegen Depth-Fighting)
   const glowRing = new THREE.Mesh(
-    new THREE.RingGeometry(0.36, 0.52, 32),
-    new THREE.MeshBasicMaterial({ color: 0xf0b429, transparent: true, opacity: 0, side: THREE.DoubleSide })
+    new THREE.RingGeometry(0.36, 0.54, 32),
+    new THREE.MeshBasicMaterial({ color: 0xf0b429, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
   );
   glowRing.rotation.x = -Math.PI / 2;
-  glowRing.position.y = 0.025;
+  glowRing.position.y = 0.038;
   glowRing.name = 'bowlGlow';
   bowlGroup.add(glowRing);
+
+  // Schwebender Leucht-Diamant / Ziel-Marker über dem Napf
+  const beacon = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.11, 0),
+    new THREE.MeshStandardMaterial({
+      color: 0xf0b429,
+      emissive: 0xf0b429,
+      emissiveIntensity: 0.6,
+      roughness: 0.2
+    })
+  );
+  beacon.position.y = 0.58;
+  beacon.name = 'bowlBeacon';
+  beacon.visible = false;
+  bowlGroup.add(beacon);
 
   // Keramiknapf mit Glanz
   const bowlBody = new THREE.Mesh(
@@ -563,15 +578,31 @@ function buildBasket() {
   basketGroup = new THREE.Group();
   basketGroup.position.set(basketWorld.x, 0, basketWorld.z);
 
-  // Leuchtring für Schlafe-Aufgabe
+  // Leuchtring für Schlafe-Aufgabe (y=0.038)
   const glowRing = new THREE.Mesh(
-    new THREE.RingGeometry(0.38, 0.54, 32),
-    new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0, side: THREE.DoubleSide })
+    new THREE.RingGeometry(0.38, 0.56, 32),
+    new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
   );
   glowRing.rotation.x = -Math.PI / 2;
-  glowRing.position.y = 0.025;
+  glowRing.position.y = 0.038;
   glowRing.name = 'basketGlow';
   basketGroup.add(glowRing);
+
+  // Schwebender Ziel-Marker
+  const basketBeacon = new THREE.Mesh(
+    new THREE.ConeGeometry(0.09, 0.18, 6),
+    new THREE.MeshStandardMaterial({
+      color: 0xa855f7,
+      emissive: 0xa855f7,
+      emissiveIntensity: 0.6,
+      roughness: 0.2
+    })
+  );
+  basketBeacon.position.y = 0.58;
+  basketBeacon.rotation.x = Math.PI;
+  basketBeacon.name = 'basketBeacon';
+  basketBeacon.visible = false;
+  basketGroup.add(basketBeacon);
 
   // Körbchen-Rand (Rattan / Holz)
   const rimMat = new THREE.MeshStandardMaterial({ color: 0xb47846, roughness: 0.85, metalness: 0.05 });
@@ -1140,6 +1171,7 @@ function tick(now) {
   // Napf blinken / pulsieren lassen, wenn eine Futter-Aufgabe aktiv ist
   if (bowlGroup) {
     const glowRing = bowlGroup.getObjectByName('bowlGlow');
+    const beacon = bowlGroup.getObjectByName('bowlBeacon');
     const isFeedMission = state.missionMode && MISSIONS[state.age] && (
       (MISSIONS[state.age][state.currentMission]?.solution?.includes('feed')) ||
       (MISSIONS[state.age][state.currentMission]?.validate?.includes('feed')) ||
@@ -1149,11 +1181,19 @@ function tick(now) {
 
     if (glowRing) {
       if (isFeedMission) {
-        const pulse = 0.5 + Math.sin(time * 6) * 0.4;
+        const pulse = 0.65 + Math.sin(time * 6) * 0.35;
         glowRing.material.opacity = pulse;
-        glowRing.scale.setScalar(1 + Math.sin(time * 6) * 0.08);
+        glowRing.scale.setScalar(1 + Math.sin(time * 6) * 0.1);
       } else {
         glowRing.material.opacity = 0;
+      }
+    }
+
+    if (beacon) {
+      beacon.visible = !!isFeedMission;
+      if (isFeedMission) {
+        beacon.rotation.y = time * 3;
+        beacon.position.y = 0.55 + Math.sin(time * 6) * 0.06;
       }
     }
 
@@ -1169,6 +1209,7 @@ function tick(now) {
   // Körbchen blinken / pulsieren lassen, wenn eine Schlaf-Aufgabe aktiv ist
   if (basketGroup && basketGroup.visible) {
     const basketGlow = basketGroup.getObjectByName('basketGlow');
+    const basketBeacon = basketGroup.getObjectByName('basketBeacon');
     const isSleepMission = state.missionMode && MISSIONS[state.age] && (
       (MISSIONS[state.age][state.currentMission]?.solution?.includes('sleep')) ||
       (MISSIONS[state.age][state.currentMission]?.validate?.includes('sleep')) ||
@@ -1178,11 +1219,19 @@ function tick(now) {
 
     if (basketGlow) {
       if (isSleepMission) {
-        const pulse = 0.5 + Math.sin(time * 6) * 0.4;
+        const pulse = 0.65 + Math.sin(time * 6) * 0.35;
         basketGlow.material.opacity = pulse;
-        basketGlow.scale.setScalar(1 + Math.sin(time * 6) * 0.08);
+        basketGlow.scale.setScalar(1 + Math.sin(time * 6) * 0.1);
       } else {
         basketGlow.material.opacity = 0;
+      }
+    }
+
+    if (basketBeacon) {
+      basketBeacon.visible = !!isSleepMission;
+      if (isSleepMission) {
+        basketBeacon.rotation.y = time * 3;
+        basketBeacon.position.y = 0.55 + Math.sin(time * 6) * 0.06;
       }
     }
   }
