@@ -66,8 +66,11 @@ const CARD_DEFS = {
 
 const CARD_SETS = {
   baby: ['up', 'down', 'left', 'right', 'feed', 'pet', 'sleep'],
-  adult: ['up', 'down', 'left', 'right', 'up2', 'down2', 'left2', 'right2',
-    'hop', 'feed', 'pet', 'sleep', 'brush', 'trim', 'trick'],
+  adult: [
+    'up', 'down', 'left', 'right', 'hop',
+    'up2', 'down2', 'left2', 'right2', 'trick',
+    'feed', 'sleep', 'pet', 'brush', 'trim'
+  ],
 };
 
 const DIRS = {
@@ -1473,7 +1476,7 @@ async function squashSleep() {
 const els = {};
 
 function cacheEls() {
-  ['age-select', 'game', 'card-tray', 'sequence-bar', 'run-btn', 'mood-face',
+  ['age-select', 'game', 'card-tray', 'sequence-bar', 'clear-seq-btn', 'run-btn', 'mood-face',
     'mood-fill', 'back-btn', 'motion-btn', 'mic-btn', 'sound-btn',
     'mission-speak-btn', 'bubble-speak-btn', 'pet-name-input',
     'speech-consent', 'speech-consent-ok', 'speech-consent-cancel',
@@ -1485,17 +1488,19 @@ function cacheEls() {
 }
 
 function renderCardTray() {
-  els['card-tray'].innerHTML = '';
+  const tray = els['card-tray'];
+  tray.innerHTML = '';
+  tray.className = `card-tray mode-${state.age}`;
   CARD_SETS[state.age].forEach((id, index) => {
     const def = CARD_DEFS[id];
+    if (!def) return;
     const btn = document.createElement('button');
     btn.className = `card-btn ${def.group}`;
-    btn.style.setProperty('--i', index);
     btn.innerHTML = ICONS[id] + `<span class="card-label">${def.label}</span>`;
     btn.setAttribute('aria-label', def.label);
     btn.title = def.label;
     btn.addEventListener('click', () => addToSequence(id));
-    els['card-tray'].appendChild(btn);
+    tray.appendChild(btn);
   });
 }
 
@@ -2231,6 +2236,14 @@ function init() {
   
   if (els['back-btn']) els['back-btn'].addEventListener('click', backToSelect);
   if (els['run-btn']) els['run-btn'].addEventListener('click', runSequence);
+  if (els['clear-seq-btn']) {
+    els['clear-seq-btn'].addEventListener('click', () => {
+      if (state.running) return;
+      state.sequence = [];
+      renderSequenceBar();
+      playSound('click');
+    });
+  }
   if (els['mode-toggle']) els['mode-toggle'].addEventListener('click', toggleMode);
   if (els['sound-btn']) els['sound-btn'].addEventListener('click', toggleSound);
 
