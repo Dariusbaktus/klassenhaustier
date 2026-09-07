@@ -7,6 +7,9 @@ falsches Ergebnis) und **Sequenz** (Reihenfolge bestimmt den Ablauf).
 
 Prototyp-Stand: 07.09.2026. Grundlage ist das Konzeptpapier `Klassenhaustier_Konzept_2026-09-07_v2`.
 
+Teil der Spielesammlung **Medienpädagogik** — Übersicht mit allen vier Spielen:
+https://dariusbaktus.github.io/medienpaedagogik/
+
 ## Starten
 
 Kein Build-Schritt, keine Abhängigkeiten zu installieren. Entweder `index.html` direkt im Browser
